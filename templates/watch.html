@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block body %}
+  <div class="row header">
+    <div>
+      <h1 class="title">{{ name }}</h1>
+      <div class="muted">Camera id: {{ camera_id }}</div>
+    </div>
+    <div class="row">
+      <a class="button" href="/cameras">Back</a>
+    </div>
+  </div>
+  <div class="card">
+    {% if use_hls %}
+      <div id="player-wrap">
+        <video id="player" controls autoplay muted playsinline></video>
+        <div id="fallback" style="display:none">
+          <p class="muted">HLS stream not ready. Showing preview instead.</p>
+          {% if preview_url %}
+            <img id="preview" src="{{ preview_url }}" alt="preview" />
+          {% endif %}
+        </div>
+      </div>
+      <p class="muted">Debug: <a href="/hls-log/{{ camera_id }}">ffmpeg log</a></p>
+      <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15"></script>
+      <script>
+        const video = document.getElementById('player');
+        const fallback = document.getElementById('fallback');
+        const preview = document.getElementById('preview');
+        const src = '{{ hls_manifest }}';
+        const previewBase = '{{ preview_url }}';
+
+        function showFallback() {
+          if (!fallback) return;
+          fallback.style.display = 'block';
+          if (preview && previewBase) {
+            setInterval(() => {
+              preview.src = previewBase + '&t=' + Date.now();
+            }, 4000);
+          }
+        }
+
+        async function waitForManifest() {
+          for (let i = 0; i < 8; i += 1) {
+            try {
+              const res = await fetch(src, { cache: 'no-store' });
+              if (res.ok) return true;
+            } catch (_) {
+            }
+            await new Promise(resolve => setTimeout(resolve, 800));
+          }
+          return false;
+        }
+
+        (async () => {
+          const ready = await waitForManifest();
+          if (!ready) {
+            showFallback();
+            return;
+          }
+
+          if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = src;
+            return;
+          }
+          if (window.Hls) {
+            const hls = new Hls({ lowLatencyMode: true });
+            hls.on(Hls.Events.ERROR, () => showFallback());
+            hls.loadSource(src);
+            hls.attachMedia(video);
+            return;
+          }
+          showFallback();
+        })();
+      </script>
+    {% else %}
+      <p class="muted">{{ fallback_reason }}{% if preview_url %} Showing preview instead.{% endif %}</p>
+      {% if preview_url %}
+        <img id="preview" src="{{ preview_url }}" alt="preview" />
+        <script>
+          const img = document.getElementById('preview');
+          setInterval(() => {
+            img.src = '{{ preview_url }}&t=' + Date.now();
+          }, 4000);
+        </script>
+      {% endif %}
+    {% endif %}
+    {% if rtsp_url %}
+      <p class="muted">RTSP: <code>{{ rtsp_url }}</code></p>
+    {% endif %}
+  </div>
+{% endblock %}
