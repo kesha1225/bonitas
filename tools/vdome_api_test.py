@@ -7,7 +7,7 @@ import sys
 import textwrap
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 import requests
 
@@ -30,7 +30,7 @@ def _redact(value: str) -> str:
     return value[:2] + "***" + value[-2:]
 
 
-def _redact_headers(headers: Dict[str, str]) -> Dict[str, str]:
+def _redact_headers(headers: dict[str, str]) -> dict[str, str]:
     redacted = {}
     for key, value in headers.items():
         lower = key.lower()
@@ -77,12 +77,12 @@ class ApiTester:
         resident_url: str,
         gateway_url: str,
         device_type: str,
-        device_token: Optional[str],
+        device_token: str | None,
         user_agent: str,
         accept: str,
         timeout: float,
-        log_file: Optional[str],
-        extra_headers: Optional[Dict[str, str]] = None,
+        log_file: str | None,
+        extra_headers: dict[str, str] | None = None,
     ) -> None:
         self.resident_url = resident_url.rstrip("/")
         self.gateway_url = gateway_url.rstrip("/")
@@ -107,10 +107,10 @@ class ApiTester:
         method: str,
         url: str,
         *,
-        access_token: Optional[str] = None,
-        headers: Optional[Dict[str, str]] = None,
-        json_body: Optional[Any] = None,
-        params: Optional[Dict[str, Any]] = None,
+        access_token: str | None = None,
+        headers: dict[str, str] | None = None,
+        json_body: Any | None = None,
+        params: dict[str, Any] | None = None,
     ) -> requests.Response:
         request_id = str(uuid.uuid4())
         base_headers = {
@@ -154,7 +154,7 @@ class ApiTester:
         self._log(f"Body: {body_text}")
         return response
 
-    def auth_init(self, phone: str, url_override: Optional[str] = None) -> requests.Response:
+    def auth_init(self, phone: str, url_override: str | None = None) -> requests.Response:
         base_url = (url_override or self.resident_url).rstrip("/")
         return self.request(
             "POST",
@@ -162,7 +162,7 @@ class ApiTester:
             json_body={"phone": phone},
         )
 
-    def auth_login(self, phone: str, code: str, url_override: Optional[str] = None) -> requests.Response:
+    def auth_login(self, phone: str, code: str, url_override: str | None = None) -> requests.Response:
         base_url = (url_override or self.resident_url).rstrip("/")
         return self.request(
             "POST",
@@ -170,7 +170,7 @@ class ApiTester:
             json_body={"phone": phone, "code": code},
         )
 
-    def auth_refresh(self, refresh_token: str, url_override: Optional[str] = None) -> requests.Response:
+    def auth_refresh(self, refresh_token: str, url_override: str | None = None) -> requests.Response:
         base_url = (url_override or self.resident_url).rstrip("/")
         return self.request(
             "PUT",
@@ -283,7 +283,7 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = _parse_args()
-    extra_headers: Dict[str, str] = {}
+    extra_headers: dict[str, str] = {}
     for item in args.header:
         if ":" not in item:
             print(f"Invalid header format: {item}. Use 'Key: Value'.", file=sys.stderr)

@@ -7,7 +7,7 @@ import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, IO, Optional
+from typing import IO
 from fastapi import Depends, FastAPI, Form, HTTPException, Request, Response, status
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -58,13 +58,13 @@ class HlsStream:
     rtsp_url: str
     started_at: float
     log_path: Path
-    log_file: Optional[IO[str]] = None
+    log_file: IO[str] | None = None
 
 
-HLS_STREAMS: Dict[str, HlsStream] = {}
+HLS_STREAMS: dict[str, HlsStream] = {}
 HLS_ROOT = Path("/tmp/vdome_hls")
 
-CAMERA_CACHE: Dict[str, dict] = {}
+CAMERA_CACHE: dict[str, dict] = {}
 CAMERA_ORDER: list[str] = []
 CAMERA_CACHE_AT = 0.0
 CAMERA_CACHE_TTL = 30.0
@@ -78,14 +78,14 @@ class ConfigError(RuntimeError):
     pass
 
 
-def _basic_challenge(realm: str) -> Dict[str, str]:
+def _basic_challenge(realm: str) -> dict[str, str]:
     return {"WWW-Authenticate": f'Basic realm="{realm}", charset="UTF-8"'}
 
 
 def _require_credentials(
-    credentials: Optional[HTTPBasicCredentials],
-    username: Optional[str],
-    password: Optional[str],
+    credentials: HTTPBasicCredentials | None,
+    username: str | None,
+    password: str | None,
     realm: str,
 ) -> None:
     if not username or not password:
@@ -109,7 +109,7 @@ def _require_credentials(
         )
 
 
-def require_stream_auth(credentials: Optional[HTTPBasicCredentials] = Depends(security)) -> None:
+def require_stream_auth(credentials: HTTPBasicCredentials | None = Depends(security)) -> None:
     _require_credentials(credentials, STREAM_USERNAME, STREAM_PASSWORD, "VDome Stream")
 
 
@@ -121,7 +121,7 @@ def _camera_key(camera: dict, index: int) -> str:
     return f"idx-{index}"
 
 
-def _ensure_hls_stream(camera_id: str, rtsp_url: str) -> Optional[Path]:
+def _ensure_hls_stream(camera_id: str, rtsp_url: str) -> Path | None:
     if not shutil.which("ffmpeg"):
         return None
 
@@ -199,7 +199,7 @@ def _api_call(fn):
         raise
 
 
-def _refresh_camera_cache(force: bool = False) -> Dict[str, dict]:
+def _refresh_camera_cache(force: bool = False) -> dict[str, dict]:
     global CAMERA_CACHE, CAMERA_ORDER, CAMERA_CACHE_AT
     now = time.time()
     if not force and CAMERA_CACHE and (now - CAMERA_CACHE_AT) < CAMERA_CACHE_TTL:
@@ -235,14 +235,14 @@ def _refresh_intercom_cache(force: bool = False) -> list[dict]:
     return INTERCOM_CACHE
 
 
-def _normalize_id(value: Optional[object]) -> Optional[str]:
+def _normalize_id(value: object | None) -> str | None:
     if value is None:
         return None
     text = str(value).strip()
     return text or None
 
 
-def _match_intercom_id(intercoms: list[dict], target: Optional[str]) -> Optional[dict]:
+def _match_intercom_id(intercoms: list[dict], target: str | None) -> dict | None:
     if not target:
         return None
     for intercom in intercoms:
@@ -252,7 +252,7 @@ def _match_intercom_id(intercoms: list[dict], target: Optional[str]) -> Optional
     return None
 
 
-def _select_intercom(camera: dict, intercoms: list[dict]) -> Optional[dict]:
+def _select_intercom(camera: dict, intercoms: list[dict]) -> dict | None:
     if not intercoms:
         return None
 
@@ -289,7 +289,7 @@ def _select_intercom(camera: dict, intercoms: list[dict]) -> Optional[dict]:
     return intercoms[0]
 
 
-def _get_camera(camera_id: str) -> Optional[dict]:
+def _get_camera(camera_id: str) -> dict | None:
     cameras = _refresh_camera_cache()
     camera = cameras.get(camera_id)
     if camera:
@@ -299,10 +299,10 @@ def _get_camera(camera_id: str) -> Optional[dict]:
 
 
 def _select_camera_id(
-    cameras: Dict[str, dict],
-    preferred_id: Optional[str],
-    preferred_name: Optional[str],
-) -> Optional[str]:
+    cameras: dict[str, dict],
+    preferred_id: str | None,
+    preferred_name: str | None,
+) -> str | None:
     if preferred_id:
         preferred_id = preferred_id.strip()
         if preferred_id in cameras:
@@ -335,8 +335,8 @@ def index() -> HTMLResponse:
 @app.get("/stream", response_class=HTMLResponse)
 def stream(
     request: Request,
-    camera_id: Optional[str] = None,
-    info: Optional[str] = None,
+    camera_id: str | None = None,
+    info: str | None = None,
     _: None = Depends(require_stream_auth),
 ) -> HTMLResponse:
     try:
@@ -406,7 +406,7 @@ def stream(
     intercom_id = None
     intercom_name = None
     lock_items: list[dict] = []
-    lock_number: Optional[int] = None
+    lock_number: int | None = None
 
     if not OPEN_CODE:
         open_disabled_reason = "Open code is not configured."
@@ -526,7 +526,7 @@ def hls_file(camera_id: str, filename: str, _: None = Depends(require_stream_aut
 def open_intercom(
     intercom_id: str = Form(...),
     code: str = Form(...),
-    lock_number: Optional[str] = Form(None),
+    lock_number: str | None = Form(None),
     _: None = Depends(require_stream_auth),
 ) -> JSONResponse:
     intercom_id = intercom_id.strip()
@@ -539,7 +539,7 @@ def open_intercom(
     if not secrets.compare_digest(code, OPEN_CODE):
         return _json_result("Invalid code", ok=False, status_code=status.HTTP_401_UNAUTHORIZED)
 
-    lock_value: Optional[int] = None
+    lock_value: int | None = None
     if lock_number:
         try:
             lock_value = int(lock_number)

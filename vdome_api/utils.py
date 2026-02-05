@@ -3,15 +3,15 @@ from __future__ import annotations
 import base64
 import json
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any
 from urllib.parse import urlparse, urlunparse
 
 
 @dataclass
 class TokenData:
-    camid: Optional[int]
-    token: Optional[str]
-    api: Optional[str]
+    camid: int | None
+    token: str | None
+    api: str | None
 
 
 class WatchTokenError(ValueError):
@@ -42,13 +42,13 @@ def decode_watch_token(watch_token: str) -> TokenData:
     return TokenData(camid=camid, token=payload.get("token"), api=payload.get("api"))
 
 
-def build_preview_url(token_data: TokenData) -> Optional[str]:
+def build_preview_url(token_data: TokenData) -> str | None:
     if not token_data.api or token_data.camid is None:
         return None
     return f"https://{token_data.api}/api/v2/cameras/{token_data.camid}/preview/"
 
 
-def inject_rtsp_auth(rtsp_url: str, login: Optional[str], password: Optional[str]) -> str:
+def inject_rtsp_auth(rtsp_url: str, login: str | None, password: str | None) -> str:
     if not login or not password:
         return rtsp_url
     parsed = urlparse(rtsp_url)
@@ -60,7 +60,7 @@ def inject_rtsp_auth(rtsp_url: str, login: Optional[str], password: Optional[str
     return urlunparse((parsed.scheme, netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
 
 
-def pick_rtsp_url(camera: Dict[str, Any]) -> Optional[str]:
+def pick_rtsp_url(camera: dict[str, Any]) -> str | None:
     if not isinstance(camera, dict):
         return None
 

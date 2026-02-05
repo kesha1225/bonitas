@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Setup commands
-- Install deps: `python -m pip install -e .`
+- Install deps: `uv sync`
 - Start demo server: `uvicorn demo_app:app --reload`
 - Show API tester help: `python tools/vdome_api_test.py --help`
 

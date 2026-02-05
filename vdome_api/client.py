@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
-from urllib.parse import urlencode, parse_qs, urlparse
+from typing import Any
+from urllib.parse import parse_qs, urlencode, urlparse
 
 import requests
 import json
@@ -28,9 +28,9 @@ class VdomeApiError(RuntimeError):
     def __init__(
         self,
         message: str,
-        status_code: Optional[int] = None,
-        errors: Optional[Any] = None,
-        response_data: Optional[Any] = None,
+        status_code: int | None = None,
+        errors: Any | None = None,
+        response_data: Any | None = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
@@ -44,10 +44,10 @@ class VdomeClient:
         resident_base_url: str = "https://resident-rest.vdome.mts.ru",
         gateway_base_url: str = "https://gateway.vdome.mts.ru",
         device_type: str = "ANDROID",
-        device_token: Optional[str] = None,
+        device_token: str | None = None,
         user_agent: str = "okhttp/4.12.0",
         timeout: float = 20.0,
-        session: Optional[requests.Session] = None,
+        session: requests.Session | None = None,
     ) -> None:
         self.resident_base_url = resident_base_url.rstrip("/")
         self.gateway_base_url = gateway_base_url.rstrip("/")
@@ -57,7 +57,7 @@ class VdomeClient:
         self.timeout = timeout
         self.session = session or requests.Session()
 
-    def _base_headers(self, request_id: Optional[str], access_token: Optional[str]) -> Dict[str, str]:
+    def _base_headers(self, request_id: str | None, access_token: str | None) -> dict[str, str]:
         headers = {
             "X-Device-Type": self.device_type,
             "Request-Id": request_id or str(uuid.uuid4()),
@@ -71,7 +71,7 @@ class VdomeClient:
             headers["X-Auth-Token"] = access_token
         return headers
 
-    def _parse_json(self, response: requests.Response) -> Optional[Any]:
+    def _parse_json(self, response: requests.Response) -> Any | None:
         try:
             return response.json()
         except ValueError:
@@ -97,8 +97,8 @@ class VdomeClient:
         method: str,
         url: str,
         *,
-        access_token: Optional[str] = None,
-        headers: Optional[Dict[str, str]] = None,
+        access_token: str | None = None,
+        headers: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> Any:
         req_headers = self._base_headers(
@@ -209,7 +209,7 @@ class VdomeClient:
         self,
         access_token: str,
         *,
-        category: Optional[str] = None,
+        category: str | None = None,
         limit: int = 1000,
     ) -> Any:
         params = {"limit": limit}
@@ -232,7 +232,7 @@ class VdomeClient:
         self,
         access_token: str,
         intercom_id: str,
-        lock_number: Optional[int] = None,
+        lock_number: int | None = None,
     ) -> Any:
         payload = {"action": "open"}
         url = f"{self.gateway_base_url}/domofon/api/intercom/v2/intercoms/{intercom_id}/lock"
@@ -255,7 +255,7 @@ class VdomeClient:
 
     # OAuth2 methods for MTS SSO
 
-    def get_oauth_authorize_url(self, config: Optional[OAuthConfig] = None) -> str:
+    def get_oauth_authorize_url(self, config: OAuthConfig | None = None) -> str:
         """Get the OAuth2 authorization URL for MTS SSO.
 
         Open this URL in a browser to start the login flow.
