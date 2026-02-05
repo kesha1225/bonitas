@@ -1,7 +1,7 @@
 [project]
 name = "bonitas"
 version = "0.1.0"
-description = "Add your description here"
+description = "Vdome API client, token tools, and demo web panel."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

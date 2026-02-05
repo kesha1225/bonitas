@@ -1,6 +1,12 @@
-# Vdome API demo
+# Vdome API tools
 
-Python-обертка и демо-веб-приложение для использования функций домофона и камер Vdome через API. Веб-демо — одна страница `/stream` с просмотром камеры и кнопкой открытия двери по 4-значному коду. Поток идет через RTSP → HLS при наличии `ffmpeg`, иначе показывается превью.
+Набор инструментов для работы с API Vdome: библиотека, CLI для получения токенов и демо-веб-панель. Веб-демо — страница `/stream` с просмотром камеры и кнопкой открытия двери по 4-значному коду. Поток идет через RTSP → HLS при наличии `ffmpeg`, иначе показывается превью.
+
+## Что внутри
+
+- Python-библиотека `vdome_api` для работы с API.
+- CLI `tools/vdome_api_test.py` для авторизации и диагностики.
+- Демо-панель на FastAPI для просмотра камеры и открытия двери.
 
 ## Быстрый старт
 
@@ -13,19 +19,8 @@ python -m pip install -e .
 Подготовьте переменные окружения:
 
 ```bash
-export VDOME_ACCESS_TOKEN="..."
-export VDOME_REFRESH_TOKEN="..."      # опционально, для авто-рефреша
-export VDOME_DEVICE_TOKEN="..."       # опционально
-
-export VDOME_STREAM_USER="stream"
-export VDOME_STREAM_PASSWORD="strong-pass"
-
-export VDOME_STREAM_CAMERA_ID="123"   # опционально, если камер несколько
-# или VDOME_STREAM_CAMERA_NAME="Entrance"
-
-export VDOME_OPEN_CODE="1234"         # обязательный 4-значный код
-export VDOME_INTERCOM_ID="456"        # опционально, если автосвязка не сработала
-export VDOME_INTERCOM_LOCK="1"        # опционально, номер замка
+cp .env.example .env
+# заполните значения в .env
 ```
 
 Запуск демо:
@@ -37,16 +32,29 @@ uvicorn demo_app:app --reload
 Откройте `http://127.0.0.1:8000/stream` и введите Basic Auth логин/пароль.
 Для реального доступа используйте HTTPS (например, через reverse proxy).
 
+Обязательные переменные:
+- `VDOME_ACCESS_TOKEN`
+- `VDOME_OPEN_CODE`
+- `VDOME_STREAM_USER`
+- `VDOME_STREAM_PASSWORD`
+
+Опциональные переменные:
+- `VDOME_REFRESH_TOKEN` (для авто-рефреша)
+- `VDOME_DEVICE_TOKEN` (Firebase Installation ID, если требуется)
+- `VDOME_STREAM_CAMERA_ID` или `VDOME_STREAM_CAMERA_NAME` (если камер несколько)
+- `VDOME_INTERCOM_ID` (если автосвязка не сработала)
+- `VDOME_INTERCOM_LOCK` (номер замка)
+
 ## Использование библиотеки
 
 ```python
 from vdome_api import VdomeClient
 
 client = VdomeClient()
-client.auth_init("9040580807")
+client.auth_init("9000000000")
 # введите SMS код
 
-tokens = client.auth_login("9040580807", "1234")
+tokens = client.auth_login("9000000000", "0000")
 
 cameras = client.get_cameras(tokens.access_token)
 print(cameras)
@@ -55,21 +63,21 @@ print(cameras)
 ## Тестирование API через CLI
 
 ```bash
-python tools/vdome_api_test.py init --phone +79040580807 --phone-mode digits10
-python tools/vdome_api_test.py login --phone +79040580807 --code 1234 --phone-mode digits10
+python tools/vdome_api_test.py init --phone 9000000000 --phone-mode digits10
+python tools/vdome_api_test.py login --phone 9000000000 --code 0000 --phone-mode digits10
 python tools/vdome_api_test.py cameras --access-token <token>
 ```
 
 Для первичной диагностики хоста/пути:
 
 ```bash
-python tools/vdome_api_test.py probe-init --phone +79040580807 --phone-mode digits10
+python tools/vdome_api_test.py probe-init --phone 9000000000 --phone-mode digits10
 ```
 
 Можно добавить дополнительные хосты:
 
 ```bash
-python tools/vdome_api_test.py probe-init --phone +79040580807 --phone-mode digits10 \
+python tools/vdome_api_test.py probe-init --phone 9000000000 --phone-mode digits10 \
   --probe-host https://freecom-app.mts.ru
 ```
 
